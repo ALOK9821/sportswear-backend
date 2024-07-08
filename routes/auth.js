@@ -1,31 +1,20 @@
-const express = require('express');
-const router = express.Router();
-const { check, validationResult } = require('express-validator');
-const authController = require('../controllers/authController');
+const jwt = require('jsonwebtoken');
 
-// @route    POST api/auth/register
-// @desc     Register user
-// @access   Public
-router.post(
-    '/register',
-    [
-        check('name', 'Name is required').not().isEmpty(),
-        check('email', 'Please include a valid email').isEmail(),
-        check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 })
-    ],
-    authController.register
-);
+module.exports = function (req, res, next) {
+    // Get token from header
+    const token = req.header('x-auth-token');
 
-// @route    POST api/auth/login
-// @desc     Authenticate user & get token
-// @access   Public
-router.post(
-    '/login',
-    [
-        check('email', 'Please include a valid email').isEmail(),
-        check('password', 'Password is required').exists()
-    ],
-    authController.login
-);
+    // Check if not token
+    if (!token) {
+        return res.status(401).json({ msg: 'No token, authorization denied' });
+    }
 
-module.exports = router;
+    // Verify token
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded.user;
+        next();
+    } catch (err) {
+        res.status(401).json({ msg: 'Token is not valid' });
+    }
+};
